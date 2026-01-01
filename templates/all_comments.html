@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحليل المشاعر - تحليل شامل</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header fade-in">
+            <h1><i class="fas fa-chart-line"></i> لوحة تحليل المشاعر</h1>
+            <p>تحليل شامل للمشاعر من التعليقات العربية والدارجة</p>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid slide-up">
+            <div class="stat-card total">
+                <i class="fas fa-comments icon"></i>
+                <h3>{{ total_comments }}</h3>
+                <p>إجمالي التعليقات</p>
+            </div>
+            
+            <div class="stat-card positive">
+                <i class="fas fa-smile icon"></i>
+                <h3>{{ positive_count }}</h3>
+                <p>تعليقات إيجابية</p>
+            </div>
+            
+            <div class="stat-card negative">
+                <i class="fas fa-frown icon"></i>
+                <h3>{{ negative_count }}</h3>
+                <p>تعليقات سلبية</p>
+            </div>
+            
+            <div class="stat-card articles">
+                <i class="fas fa-newspaper icon"></i>
+                <h3>{{ stats.total_articles }}</h3>
+                <p>عدد المقالات</p>
+            </div>
+        </div>
+
+        <!-- Progress Bars -->
+        <div class="chart-container fade-in">
+            <h3><i class="fas fa-chart-bar"></i> توزيع المشاعر</h3>
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>إيجابي</span>
+                    <span>{{ "%.1f"|format(positive_percentage) }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill progress-positive" style="width: {{ positive_percentage }}%"></div>
+                </div>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>سلبي</span>
+                    <span>{{ "%.1f"|format(negative_percentage) }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill progress-negative" style="width: {{ negative_percentage }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid">
+            {% if charts.pie_chart %}
+            <div class="chart-container fade-in">
+                <h3><i class="fas fa-chart-pie"></i> توزيع المشاعر</h3>
+                <img src="data:image/png;base64,{{ charts.pie_chart }}" alt="Sentiment Distribution">
+            </div>
+            {% endif %}
+
+            {% if charts.bar_chart %}
+            <div class="chart-container fade-in">
+                <h3><i class="fas fa-chart-bar"></i> مقارنة المشاعر</h3>
+                <img src="data:image/png;base64,{{ charts.bar_chart }}" alt="Sentiment Comparison">
+            </div>
+            {% endif %}
+
+            {% if charts.engagement_chart %}
+            <div class="chart-container fade-in">
+                <h3><i class="fas fa-thumbs-up"></i> تحليل التفاعل</h3>
+                <img src="data:image/png;base64,{{ charts.engagement_chart }}" alt="Engagement Analysis">
+            </div>
+            {% endif %}
+
+            {% if charts.length_chart %}
+            <div class="chart-container fade-in">
+                <h3><i class="fas fa-text-width"></i> توزيع أطوال التعليقات</h3>
+                <img src="data:image/png;base64,{{ charts.length_chart }}" alt="Comment Length Distribution">
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Additional Statistics -->
+        <div class="chart-container fade-in">
+            <h3><i class="fas fa-info-circle"></i> إحصائيات إضافية</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-calculator icon"></i>
+                    <h3>{{ stats.avg_comments_per_article }}</h3>
+                    <p>متوسط التعليقات لكل مقال</p>
+                </div>
+                
+                <div class="stat-card">
+                    <i class="fas fa-text-height icon"></i>
+                    <h3>{{ stats.avg_comment_length }}</h3>
+                    <p>متوسط طول التعليق (كلمة)</p>
+                </div>
+                
+                {% if stats.engagement_rate > 0 %}
+                <div class="stat-card">
+                    <i class="fas fa-heart icon"></i>
+                    <h3>{{ stats.engagement_rate }}</h3>
+                    <p>معدل التفاعل لكل تعليق</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Word Cloud Section -->
+        {% if wordcloud_url %}
+        <div class="wordcloud-section fade-in">
+            <h3><i class="fas fa-cloud"></i> سحابة الكلمات الأكثر تكراراً</h3>
+            <div class="wordcloud-container">
+                <img src="data:image/png;base64,{{ wordcloud_url }}" alt="Word Cloud" style="max-width: 100%; height: auto;">
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- AI Report Section -->
+        {% if sentiment_report %}
+        <div class="report-section fade-in">
+            <h3><i class="fas fa-robot"></i> تقرير الذكاء الاصطناعي</h3>
+            <div class="ai-report">
+                {{ sentiment_report }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Detailed Comments Table -->
+        <div class="comments-section fade-in">
+            <h3><i class="fas fa-list"></i> تفاصيل التعليقات (أول 50 تعليق)</h3>
+            <table class="comments-table">
+                <thead>
+                    <tr>
+                        <th>التعليق</th>
+                        <th>المشاعر</th>
+                        <th>الإعجابات</th>
+                        <th>عدد الكلمات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for comment in sentiment_results[:50] %}
+                    <tr>
+                        <td>{{ comment.comment[:100] }}{% if comment.comment|length > 100 %}...{% endif %}</td>
+                        <td>
+                            <span class="sentiment-badge sentiment-{{ comment.sentiment }}">
+                                {% if comment.sentiment == 'positive' %}
+                                    <i class="fas fa-smile"></i> إيجابي
+                                {% else %}
+                                    <i class="fas fa-frown"></i> سلبي
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>{{ comment.likes }}</td>
+                        <td>{{ comment.comment.split()|length }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Back to Home Button -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{ url_for('index') }}" style="background: var(--primary-color); color: white; padding: 15px 30px; border-radius: 25px; text-decoration: none; font-weight: 600; transition: all 0.3s ease;">
+                <i class="fas fa-home"></i> العودة للصفحة الرئيسية
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Add smooth animations when page loads
+        window.addEventListener('load', function() {
+            const elements = document.querySelectorAll('.fade-in, .slide-up');
+            elements.forEach((element, index) => {
+                setTimeout(() => {
+                    element.style.opacity = '1';
+                    element.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+
+        // Add hover effects to stat cards
+        document.querySelectorAll('.stat-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px) scale(1.02)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+
+        // Animate progress bars
+        setTimeout(() => {
+            document.querySelectorAll('.progress-fill').forEach(bar => {
+                const width = bar.style.width;
+                bar.style.width = '0%';
+                setTimeout(() => {
+                    bar.style.width = width;
+                }, 500);
+            });
+        }, 1000);
+    </script>
+</body>
+</html>

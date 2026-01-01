@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comment Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+<nav>
+    <a href="/">Home</a>
+</nav>
+
+<div class="container">
+    <h2>Comments Sentiment Analysis</h2>
+    {% if sentiment_results %}
+        <table>
+            <tr>
+                <th>Comment</th>
+                <th>Likes</th>
+                <th>Sentiment</th>
+            </tr>
+            {% for result in sentiment_results %}
+            <tr>
+                <td>{{ result.comment }}</td>
+                <td>{{ result.likes }}</td>
+                <td {% if result.sentiment == "positive" %}style="color: green;"{% endif %}>{{ result.sentiment }}</td>            </tr>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No comments to display.</p>
+    {% endif %}
+
+    <h3>Top 5 Redundant Words</h3>
+    {% if top_5_words %}
+        <ul>
+            {% for word, count in top_5_words %}
+            <li>{{ word }}: {{ count }} times</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No redundant words found.</p>
+    {% endif %}
+</div>
+
+</body>
+</html>

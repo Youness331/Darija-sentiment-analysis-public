@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrape Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+<nav>
+    <a href="/">Home</a>
+</nav>
+
+<div class="container">
+    <h2>Scraped Articles</h2>
+    <table>
+        <tr>
+            <th>Title</th>
+            <th>Date</th>
+            <th>Action</th>
+        </tr>
+        {% for article in data %}
+        <tr>
+            <!-- Title looks normal until hovered, then shows as a link -->
+            <td><a href="{{ article.link }}" class="article-link" target="_blank">{{ article.title }}</a></td>
+            <!-- Displaying the date in Arabic -->
+            <td>{{ article.date }}</td>
+            <td><a href="{{ url_for('analyze_comments', article_link=article.link | urlencode) }}" class="btn">Analyse Comments</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<div style="position: fixed; bottom: 10px; left: 10px;">
+    <form action="/all_comments" method="POST">
+        {% for article in data %}
+            <input type="hidden" name="article_links" value="{{ article.link }}">
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">All Comments</button>
+    </form>
+</div>
+
+</body>
+</html>

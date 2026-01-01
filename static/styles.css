@@ -1,0 +1,351 @@
+/* General Body Styles */
+body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+
+/* Navigation Styles */
+nav {
+    background: linear-gradient(135deg, #007bff, #0056b3); 
+    padding: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 18px;
+    margin: 0 20px;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+nav a:hover {
+    color: #d1e0ff;
+    transform: scale(1.1); /* Add hover scaling */
+}
+
+/* Container Styles */
+.container {
+    margin: 50px auto;
+    padding: 40px;
+    background-color: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    max-width: 900px;
+    text-align: center;
+    animation: fadeInUp 1.5s ease-in-out;
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Headings */
+h1, h2 {
+    color: #333;
+    font-size: 32px;
+    margin-bottom: 30px;
+    border-bottom: 3px solid #007bff;
+    display: inline-block;
+    padding-bottom: 10px;
+    animation: fadeInDown 1s ease-in-out;
+}
+
+@keyframes fadeInDown {
+    0% {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+h3 {
+    color: #555;
+    font-size: 24px;
+    margin-top: 40px;
+    border-bottom: 2px solid #007bff;
+    display: inline-block;
+    padding-bottom: 5px;
+}
+
+/* Form Styles */
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+label {
+    font-weight: bold;
+    font-size: 18px;
+    color: #555;
+}
+
+input[type="text"], input[type="number"] {
+    width: 80%;
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 18px;
+    transition: border-color 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+input[type="text"]:focus, input[type="number"]:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+input[type="submit"] {
+    width: 80%;
+    background: linear-gradient(135deg, #28a745, #218838);
+    color: white;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+input[type="submit"]:hover {
+    background: linear-gradient(135deg, #218838, #1e7e34);
+    transform: scale(1.05);
+}
+
+/* Table Styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 30px;
+    animation: fadeInUp 1.5s ease-in-out;
+}
+
+table th, table td {
+    padding: 15px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+    font-size: 18px;
+}
+
+table th {
+    background-color: #007bff;
+    color: white;
+}
+
+table td a {
+    color: #333;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+table td a:hover {
+    color: #007bff;
+    text-decoration: underline;
+}
+
+/* Link Hover Effect for Article Titles */
+.article-link {
+    position: relative;
+    font-weight: bold;
+    color: #333;
+    text-decoration: none;
+    transition: color 0.3s ease, border-bottom 0.3s ease;
+}
+
+.article-link:hover {
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+}
+
+/* Button Styles */
+.btn {
+    display: inline-block;
+    padding: 12px 25px;
+    background-color: #28a745;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 18px;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+}
+
+/* Footer Styles */
+footer {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    text-align: center;
+    padding: 15px;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.2);
+    animation: fadeInUp 2s ease-in-out;
+}
+
+/* Redundant Words List */
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+ul li {
+    font-size: 18px;
+    margin: 10px 0;
+}
+
+ul li::before {
+    content: "•";
+    color: #007bff;
+    margin-right: 10px;
+}
+
+/* Fixed Button for All Comments */
+.fixed-button {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    background: linear-gradient(135deg, #28a745, #218838);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 18px;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.fixed-button:hover {
+    background: linear-gradient(135deg, #218838, #1e7e34);
+    transform: translateY(-3px) scale(1.05);
+}
+
+/* Comments List */
+ul.comments {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 30px;
+    text-align: left;
+    animation: fadeInUp 2s ease-in-out;
+}
+
+ul.comments li {
+    font-size: 18px;
+    margin: 10px 0;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+ul.comments li:hover {
+    transform: translateY(-5px);
+    background-color: #eef2f5;
+}
+
+ul.comments li span.comment-text {
+    flex-grow: 1;
+    font-style: italic;
+}
+
+ul.comments li span.likes {
+    font-weight: bold;
+    margin-left: 20px;
+    color: #007bff;
+}
+
+/* Image (Sentiment Chart) */
+img {
+    margin-top: 30px;
+    max-width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+}
+
+img:hover {
+    transform: scale(1.02);
+}
+
+/* Sentiment Statistics */
+p {
+    font-size: 20px;
+    margin: 10px 0;
+    font-style: italic;
+    animation: fadeIn 1.5s ease-in-out;
+}
+/* General paragraph styling */
+p {
+    font-size: 16px;
+    color: #333;
+    line-height: 1.6;
+    margin-bottom: 10px;
+}
+
+/* Styling for strong text within paragraphs */
+p strong {
+    font-weight: bold;
+    color: #000;
+}
+
+/* Styling for paragraphs inside the statistics section */
+.statistics p {
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+/* Fancy styling for the sentiment report box */
+.report-box {
+    background-color: #fff;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    opacity: 0;
+    animation: fadeInBox 1s forwards;
+    margin-top: 20px;
+}
+
+/* Hover effect for the sentiment report */
+.report-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Animation for the box to fade in */
+@keyframes fadeInBox {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
