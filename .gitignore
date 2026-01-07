@@ -2,3 +2,4 @@ venv/
 models/
 screenshots/
 .env
+debug_page_source.html
