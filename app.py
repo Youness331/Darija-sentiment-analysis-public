@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
 import pandas as pd
 import urllib.parse
 from urllib.parse import unquote
@@ -27,6 +27,8 @@ import torch
 import google.generativeai as genai
 from safetensors.torch import load_file
 import requests
+import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Load environment variables from .env file
 load_dotenv()
@@ -42,11 +44,15 @@ import sys
 sys.path.append('.')
 
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "your-secret-key-here")  # Add to .env file
+
+# Global cache for storing scraped comments
+# Structure: {article_link: {'comments': [...], 'timestamp': datetime}}
+COMMENTS_CACHE = {}
 
 # Load stop words from the CSV file
 stop_words_df = pd.read_csv('Stop_words.csv', header=None, encoding='utf-16')
-stop_words = set(stop_words_df[0].tolist())  # Convert to a set for faster lookups
-
+stop_words = set(stop_words_df[0].tolist())
 
 # Load the pre-trained tokenizer
 tokenizer = BertTokenizer.from_pretrained("SI2M-Lab/DarijaBERT")
@@ -61,6 +67,41 @@ model.load_state_dict(state_dict)
 
 # Set the model to evaluation mode
 model.eval()
+
+
+def scrape_single_article_comments(link):
+    """Helper function to scrape comments for a single article"""
+    try:
+        print(f"Scraping comments from: {link}")
+        comments = scrape_comments(link)
+        return link, comments
+    except Exception as e:
+        print(f"Error scraping {link}: {e}")
+        return link, []
+
+
+def scrape_all_comments_parallel(article_links, max_workers=3):
+    """
+    Scrape comments from multiple articles in parallel
+    max_workers: number of concurrent scraping threads (adjust based on your system)
+    """
+    comments_by_article = {}
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all scraping tasks
+        future_to_link = {
+            executor.submit(scrape_single_article_comments, link): link 
+            for link in article_links
+        }
+        
+        # Collect results as they complete
+        for future in as_completed(future_to_link):
+            link, comments = future.result()
+            comments_by_article[link] = comments
+            print(f"Completed scraping {link}: {len(comments)} comments found")
+    
+    return comments_by_article
+
 
 def analyze_sentiment(comments):
     results = []
@@ -80,9 +121,8 @@ def analyze_sentiment(comments):
             predictions = torch.argmax(logits, dim=1).item()
 
             # Determine sentiment
-            sentiment = 'positive' if predictions ==1 else 'negative'
-            #print(f"Predicted Sentiment: {sentiment}")
-            #print(f"prediction_value: {predictions}")
+            sentiment = 'positive' if predictions == 1 else 'negative'
+
         # Append result
         results.append({
             'comment': comment,
@@ -102,131 +142,152 @@ def analyze_sentiment(comments):
     return results, top_5_words
 
 
-# Function to load stopwords from stopwords.csv
 def load_stopwords(file_path):
     all_stopwords = set()
     with open(file_path, 'r', encoding='utf-16') as file:
         reader = csv.reader(file)
         for row in reader:
-            if row:  # Check if row is not empty
+            if row:
                 all_stopwords.add(row[0].strip())
     
-    # Import and get Arabic stopwords from NLTK
     from nltk.corpus import stopwords
     try:
         arabic_stopwords = set(stopwords.words('arabic'))
-        # Union arabic with darija stopwords
         all_stopwords = all_stopwords.union(arabic_stopwords)
     except LookupError:
-        # If Arabic stopwords are not available, just use Darija ones
         print("Arabic stopwords not found, using only Darija stopwords")
     
     return all_stopwords
 
 
-# Configure the Gemini API
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Function to generate a sentiment report via Gemini-like API
-def generate_report(positive_percentage, negative_percentage):
-    # Create the prompt for the API using the positive and negative percentages
-    prompt = f"The article has {positive_percentage}% positive comments and {negative_percentage}% negative comments. Based on this, generate a sentiment report in arabic summarizing the sentiments presenting  with the articles and by negative comment it means that reader is sad about the article."
 
-    # Use the generative AI model to create a response
+def generate_report(positive_percentage, negative_percentage):
+    prompt = f"The article has {positive_percentage}% positive comments and {negative_percentage}% negative comments. Based on this, generate a sentiment report in arabic summarizing the sentiments presenting with the articles and by negative comment it means that reader is sad about the article."
+
     model = genai.GenerativeModel(model_name="gemini-1.5-flash")
     
     try:
         response = model.generate_content(prompt)
-        # Extract and return the generated report
         return response.text
-    
     except Exception as e:
         print(f"Error generating report: {e}")
         return "Could not generate the report due to an API error."
 
-# Function to clean and tokenize the text, removing stopwords
+
 def clean_and_tokenize_comments(comments, stop_words):
     all_words = []
     for comment_data in comments:
         comment = comment_data['comment']
-        # Tokenize and filter words (remove stopwords)
         words = re.findall(r'\b\w+\b', comment.lower())
         filtered_words = [word for word in words if word not in stop_words]
         all_words.extend(filtered_words)
     return all_words
 
-# Function to generate and display the word cloud
+
 def generate_wordcloud(filtered_words):
-    # Create a word cloud
     reshaped_text = arabic_reshaper.reshape(' '.join(filtered_words))
-    bidi_text =get_display(reshaped_text)
+    bidi_text = get_display(reshaped_text)
     wordcloud = WordCloud(font_path='arial', 
                           background_color='white',
                           width=300,
                           height=350).generate(bidi_text)
-    # Save wordcloud image to a BytesIO object
+    
     img = io.BytesIO()
-    #plot the wordcould image
     plt.figure(figsize=(8, 4))
     plt.imshow(wordcloud, interpolation='bilinear')
     plt.axis('off')
     plt.savefig(img, format='png')
     img.seek(0)
     
-    # Convert image to base64
     wordcloud_url = base64.b64encode(img.getvalue()).decode('utf8')
     plt.close()
 
     return wordcloud_url
 
 
-# Route for the homepage
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Route to display results after scraping
+
 @app.route('/results', methods=['POST'])
 def results():
     key_name = request.form['keyword']
     interval_days = int(request.form['days'])
-    url = 'https://www.hespress.com/all?most_commented'  # URL to scrape from
+    url = 'https://www.hespress.com/all?most_commented'
     
+    # Step 1: Scrape articles
+    print("Step 1: Scraping articles...")
     df = dynamic_scraper(interval_days, key_name, url)
-    print(df)
-    if df is not None:
-        # Show the scraped data on the results page
-        return render_template('results.html', data=df.to_dict(orient='records'))
+    
+    if df is not None and len(df) > 0:
+        article_links = df['link'].tolist()
+        
+        # Step 2: Scrape comments from all articles in parallel
+        print(f"Step 2: Scraping comments from {len(article_links)} articles in parallel...")
+        comments_by_article = scrape_all_comments_parallel(article_links, max_workers=3)
+        
+        # Step 3: Store in cache and session
+        global COMMENTS_CACHE
+        COMMENTS_CACHE.update(comments_by_article)
+        
+        # Also store in session for persistence across requests
+        session['comments_cache'] = {
+            link: comments for link, comments in comments_by_article.items()
+        }
+        session['article_links'] = article_links
+        
+        # Add comment count to dataframe
+        df['comment_count'] = df['link'].apply(lambda x: len(comments_by_article.get(x, [])))
+        
+        print(f"✓ Successfully scraped and cached comments for {len(article_links)} articles")
+        
+        return render_template('results.html', 
+                             data=df.to_dict(orient='records'),
+                             comments_cached=True)
     else:
-        return render_template('results.html', data=[])
+        return render_template('results.html', data=[], comments_cached=False)
 
 
-# Route to display all comments and generate the pie chart
 @app.route('/all_comments', methods=['POST'])
 def all_comments():
-    article_links = request.form.getlist('article_links')  # Get all article links from the form
-
+    article_links = request.form.getlist('article_links')
+    
+    # Try to get cached comments first
+    comments_cache = session.get('comments_cache', {})
+    global COMMENTS_CACHE
+    
     all_comments = []
     positive_count = 0
     negative_count = 0
     stop_words2 = load_stopwords('Stop_words.csv')
-    # Scrape and analyze comments from each article
+    
+    # Use cached comments if available
     for link in article_links:
-        comments = scrape_comments(link)
+        # Check session cache first, then global cache
+        comments = comments_cache.get(link) or COMMENTS_CACHE.get(link)
+        
+        if comments is None:
+            # Fallback: scrape if not in cache
+            print(f"Cache miss for {link}, scraping now...")
+            comments = scrape_comments(link)
+            COMMENTS_CACHE[link] = comments
+        else:
+            print(f"Cache hit for {link}: {len(comments)} comments")
+        
         analyzed_comments, _ = analyze_sentiment(comments)
         all_comments.extend(analyzed_comments)
 
-        # Count positive and negative comments
         for comment in analyzed_comments:
             if comment['sentiment'] == 'positive':
                 positive_count += 1
             elif comment['sentiment'] == 'negative':
                 negative_count += 1
 
-    # Total number of comments
     total_comments = positive_count + negative_count
 
-    # Calculate percentages (ensure no division by zero)
     if total_comments > 0:
         positive_percentage = (positive_count / total_comments) * 100
         negative_percentage = (negative_count / total_comments) * 100
@@ -234,11 +295,10 @@ def all_comments():
         positive_percentage = 0
         negative_percentage = 0
 
-    # Debugging: Print to check calculations
     print(f"Positive Count: {positive_count}, Negative Count: {negative_count}")
     print(f"Positive Percentage: {positive_percentage}%, Negative Percentage: {negative_percentage}%")
 
-    # Generate multiple visualizations
+    # Generate visualizations
     charts = {}
     
     if total_comments > 0:
@@ -264,7 +324,6 @@ def all_comments():
         counts = [positive_count, negative_count]
         bars = plt.bar(sentiments, counts, color=['#4CAF50', '#f44336'], alpha=0.8)
         
-        # Add value labels on bars
         for bar, count in zip(bars, counts):
             plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
                     str(count), ha='center', va='bottom', fontweight='bold', fontsize=12)
@@ -280,7 +339,7 @@ def all_comments():
         charts['bar_chart'] = base64.b64encode(img.getvalue()).decode('utf8')
         plt.close()
         
-        # 3. Engagement Analysis (if likes data available)
+        # 3. Engagement Analysis
         positive_likes = sum(int(comment.get('likes', 0)) for comment in all_comments 
                            if comment['sentiment'] == 'positive')
         negative_likes = sum(int(comment.get('likes', 0)) for comment in all_comments 
@@ -308,7 +367,6 @@ def all_comments():
             plt.close()
         
         # 4. Comment Length Analysis
-        comment_lengths = [len(comment['comment'].split()) for comment in all_comments]
         positive_lengths = [len(comment['comment'].split()) for comment in all_comments 
                           if comment['sentiment'] == 'positive']
         negative_lengths = [len(comment['comment'].split()) for comment in all_comments 
@@ -330,24 +388,22 @@ def all_comments():
         charts['length_chart'] = base64.b64encode(img.getvalue()).decode('utf8')
         plt.close()
     
-    # Calculate additional statistics
+    # Calculate statistics
     stats = {
         'total_articles': len(article_links),
         'total_comments': total_comments,
         'avg_comments_per_article': round(total_comments / len(article_links), 2) if article_links else 0,
         'avg_comment_length': round(sum(len(comment['comment'].split()) for comment in all_comments) / total_comments, 2) if total_comments > 0 else 0,
-        'most_positive_article': None,
-        'most_negative_article': None,
         'engagement_rate': round((positive_likes + negative_likes) / total_comments, 2) if total_comments > 0 and 'positive_likes' in locals() else 0
     }
+    
     # Generate AI sentiment report
     sentiment_report = generate_report(positive_percentage, negative_percentage)
     
-    # Generate the word cloud from all comments
+    # Generate word cloud
     filtered_words = clean_and_tokenize_comments(all_comments, stop_words2)
     wordcloud_url = generate_wordcloud(filtered_words)
 
-    # Pass comprehensive data to the template
     return render_template(
         'all_comments.html',
         sentiment_results=all_comments,
@@ -363,25 +419,35 @@ def all_comments():
     )
 
 
-
 @app.route('/analyze_comments/<path:article_link>', methods=['GET'])
 def analyze_comments(article_link):
-    article_link = unquote(article_link)  # Decode the URL-encoded article link
-    print("Decoded Article Link:", article_link) 
-    comments = scrape_comments(article_link)  # Scrape comments
-    # Debugging: Check if comments are scraped
-    print("Scraped Comments:", comments)
+    article_link = unquote(article_link)
+    print("Decoded Article Link:", article_link)
+    
+    # Try to get cached comments
+    comments_cache = session.get('comments_cache', {})
+    global COMMENTS_CACHE
+    
+    comments = comments_cache.get(article_link) or COMMENTS_CACHE.get(article_link)
+    
+    if comments is None:
+        # Fallback: scrape if not in cache
+        print(f"Cache miss for {article_link}, scraping now...")
+        comments = scrape_comments(article_link)
+        COMMENTS_CACHE[article_link] = comments
+    else:
+        print(f"Cache hit for {article_link}: {len(comments)} comments")
     
     if not comments:
         print("No comments found")
     
-    sentiment_results, top_5_words = analyze_sentiment(comments)  # Analyze sentiment and get top 5 redundant words
+    sentiment_results, top_5_words = analyze_sentiment(comments)
     
-    # Print the top 5 redundant words for debugging
     print("Top 5 Redundant Words:", top_5_words)
     
-    return render_template('comments.html', sentiment_results=sentiment_results, top_5_words=top_5_words)
-
+    return render_template('comments.html', 
+                         sentiment_results=sentiment_results, 
+                         top_5_words=top_5_words)
 
 
 if __name__ == '__main__':

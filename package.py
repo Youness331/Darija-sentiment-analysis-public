@@ -172,15 +172,7 @@ def scrape_comments(article_link):
         page_source = driver.page_source
         soup = BeautifulSoup(page_source, 'html.parser')
         driver.quit()
-        
-        print("Page source length:", len(page_source))
-        
-        # Debug: Save page source to file for inspection
-        with open('debug_page_source.html', 'w', encoding='utf-8') as f:
-            f.write(page_source)
-        print("Page source saved to debug_page_source.html")
-        
-        # Find comments using exact class names with debugging
+                # Find comments using exact class names with debugging
         print("Searching for comments...")
         comments = soup.find_all('div', class_='comment-text')
         print(f"Found {len(comments)} comments with exact class 'comment-text'")
@@ -191,11 +183,7 @@ def scrape_comments(article_link):
             print(f"Found {len(all_comment_divs)} divs with 'comment' in class name")
             comments = all_comment_divs
             
-        # Print first few class names for debugging
-        for i, comment in enumerate(comments[:3]):
-            # print(f"Comment {i+1} class: {comment.get('class')}")
         
-        # Find likes using exact class names with debugging
         print("Searching for likes...")
         likes = soup.find_all('span', class_='comment-recat-number')
         print(f"Found {len(likes)} likes with exact class 'comment-recat-number'")
